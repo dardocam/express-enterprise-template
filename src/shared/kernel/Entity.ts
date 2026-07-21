@@ -2,7 +2,7 @@ import { UniqueId } from './UniqueId.js';
 
 export abstract class Entity<T> {
   protected readonly _id: UniqueId;
-  public readonly props: T;
+  protected readonly props: T;
 
   constructor(props: T, id?: UniqueId) {
     this._id = id || new UniqueId();
@@ -13,10 +13,15 @@ export abstract class Entity<T> {
     return this._id;
   }
 
-  equals(object?: Entity<T>): boolean {
-    if (object == null || object == undefined) return false;
-    if (this === object) return true;
-    if (!(object instanceof Entity)) return false;
-    return this._id.equals(object._id);
+  /**
+   * Compara dos entidades por su identidad, no por sus atributos.
+   * En DDD, dos entidades con distinto tipo pero mismo ID no deberían considerarse iguales.
+   * Por eso mantenemos la verificación de instancia, pero aceptamos cualquier Entity.
+   */
+  equals(other?: Entity<any>): boolean {
+    if (!other || !(other instanceof Entity)) {
+      return false;
+    }
+    return this._id.equals(other._id);
   }
 }

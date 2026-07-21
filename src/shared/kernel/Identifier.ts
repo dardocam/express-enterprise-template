@@ -1,19 +1,20 @@
-export class Identifier<T> {
-  constructor(private readonly value: T) {
-    this.value = value;
-  }
+export abstract class Identifier<T> {
+  // Constructor protegido: solo se puede heredar, no instanciar directamente.
+  protected constructor(protected readonly value: T) {}
 
-  equals(id?: Identifier<T>): boolean {
-    if (id === null || id === undefined) return false;
-    if (!(id instanceof this.constructor)) return false;
-    return id.toValue() === this.value;
+  // Permite comparar cualquier Identifier (sin importar el tipo concreto T)
+  equals(other?: Identifier<any>): boolean {
+    if (!other || !(other instanceof Identifier)) {
+      return false;
+    }
+    return this.value === other.value;
   }
 
   toString(): string {
     return String(this.value);
   }
 
-  toValue(): T {
+  getValue(): T {
     return this.value;
   }
 }

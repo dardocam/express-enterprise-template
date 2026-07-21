@@ -1,34 +1,37 @@
 export class Result<T> {
-  public isSuccess: boolean;
-  public isFailure: boolean;
-  private error: string | null;
-  private _value: T | null;
+  public readonly isSuccess: boolean;
+  public readonly isFailure: boolean;
+  private readonly _error: string;
+  private readonly _value: T;
 
-  private constructor(isSuccess: boolean, error?: string | null, value?: T) {
-    if (isSuccess && error) throw new Error('A result cannot be successful and contain an error');
-    if (!isSuccess && !error) throw new Error('A failing result needs to contain an error message');
-
+  private constructor(isSuccess: boolean, error: string, value: T) {
     this.isSuccess = isSuccess;
     this.isFailure = !isSuccess;
-    this.error = error || null;
-    this._value = value || null;
+    this._error = error;
+    this._value = value;
+    Object.freeze(this);
   }
 
-  public getValue(): T {
-    if (!this.isSuccess) throw new Error('Cannot get the value of a failed result.');
-    return this._value as T;
+  static ok<U>(value?: U): Result<U> {
+    // Si no se pasa valor, se asigna undefined (sigue siendo un Result exitoso sin valor)
+    return new Result<U>(true, '', value as U);
   }
 
-  public getErrorValue(): string {
-    if (this.isSuccess) throw new Error('Cannot get the error of a successful result.');
-    return this.error as string;
+  static fail<U>(error: string): Result<U> {
+    return new Result<U>(false, error, null as unknown as U);
   }
 
-  public static ok<U>(value?: U): Result<U> {
-    return new Result<U>(true, null, value);
+  getValue(): T {
+    if (this.isFailure) {
+      throw new Error(`No se puede obtener el valor de un resultado fallido: ${this._error}`);
+    }
+    return this._value;
   }
 
-  public static fail<U>(error: string): Result<U> {
-    return new Result<U>(false, error);
+  getErrorValue(): string {
+    if (this.isSuccess) {
+      throw new Error('No se puede obtener el error de un resultado exitoso');
+    }
+    return this._error;
   }
 }

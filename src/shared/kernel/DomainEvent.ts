@@ -2,12 +2,20 @@ import { UniqueId } from './UniqueId.js';
 
 export abstract class DomainEvent {
   public readonly dateTimeOccurred: Date;
-  public readonly eventId: UniqueId;
+  public readonly eventId: string;
 
   constructor() {
     this.dateTimeOccurred = new Date();
-    this.eventId = new UniqueId();
+    this.eventId = new UniqueId().toString();
   }
 
-  abstract get aggregateId(): UniqueId;
+  abstract get aggregateId(): string;
+
+  /**
+   * Nombre único del evento. Por convención, puede ser el nombre de la clase.
+   * Facilita el enrutamiento en buses de eventos.
+   */
+  get eventType(): string {
+    return this.constructor.name;
+  }
 }
