@@ -6,7 +6,7 @@ import { applySecurityMiddleware } from './config/security.js';
 import { responseWrapper } from './shared/middleware/responseWrapper.js';
 import { errorHandler } from './shared/middleware/errorHandler.js';
 // import { healthRoutes } from './modules/health/health.routes.js';
-// import { setupSwagger } from './config/swagger';
+import { setupSwagger } from './config/swagger.js';
 // import { requestIdMiddleware } from './shared/middleware/requestId';
 import cors from 'cors';
 import { getCorsOptions } from '@shared/middleware/cors.js';
@@ -38,7 +38,7 @@ export function createApp() {
   app.use(responseWrapper);
 
   // Swagger
-  // setupSwagger(app);
+  setupSwagger(app);
 
   // Routes
   // Ruta de ejemplo
