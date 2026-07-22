@@ -1,3 +1,166 @@
+Perfecto, adaptamos la capa web **espejando la organización por Bounded Context**.  
+La idea es que cada contexto delimitado tenga su propio adaptador de entrada web, manteniendo el núcleo de dominio intacto.
+
+---
+
+## 📁 Estructura completa con capa web orientada a Bounded Context
+
+```
+src/
+├─ domain/                                ← Capa de dominio (DDD táctico)
+│  ├─ shared/                             ← Shared Kernel (tu carpeta)
+│  └─ order/                              ← Bounded Context "Orders"
+│     ├─ value-objects/
+│     │  └─ Money.ts
+│     ├─ entities/
+│     │  └─ OrderLine.ts
+│     ├─ aggregates/
+│     │  └─ Order.ts                      ← Aggregate Root
+│     ├─ events/
+│     │  └─ OrderCreated.ts
+│     ├─ specifications/
+│     │  └─ OrderAmountBelowLimit.ts
+│     └─ ports/                           ← Puertos de salida (driven)
+│        └─ IOrderRepository.ts
+
+├─ application/                           ← Casos de uso (orquestación)
+│  └─ order/
+│     └─ CreateOrderUseCase.ts
+
+├─ infrastructure/                        ← Adaptadores de salida
+│  ├─ persistence/
+│  │  └─ InMemoryOrderRepository.ts
+│  └─ event-bus/
+│     └─ InMemoryEventBus.ts
+
+└─ interfaces/                            ← Capa de interfaz (adaptadores de entrada)
+   └─ web/
+      └─ order/                           ← Adaptador de entrada para "Orders"
+         ├─ controllers/
+         │  └─ OrderController.ts
+         └─ routes/
+            └─ orderRoutes.ts
+      (si hubiera otro BC, ej. "shipping", tendrías interfaces/web/shipping/...)
+```
+
+> **Regla clave**: La estructura de carpetas en `interfaces/web` **refleja los Bounded Contexts** del dominio. Así cada equipo puede trabajar de forma autónoma.
+
+---
+
+## 🧩 Código del adaptador web para "Orders"
+
+### Controlador – `interfaces/web/order/controllers/OrderController.ts`
+
+```typescript
+import { Request, Response } from 'express';
+import { CreateOrderUseCase } from '../../../../application/order/CreateOrderUseCase';
+
+export class OrderController {
+  constructor(private readonly createOrderUseCase: CreateOrderUseCase) {}
+
+  async create(req: Request, res: Response): Promise<void> {
+    try {
+      const { customerId, items } = req.body;
+
+      if (!customerId || !Array.isArray(items)) {
+        res.status(400).json({ error: 'Datos de entrada inválidos' });
+        return;
+      }
+
+      const result = await this.createOrderUseCase.execute({
+        customerId,
+        items: items.map((item: any) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        })),
+      });
+
+      if (result.isSuccess) {
+        res.status(201).json({ orderId: result.getValue() });
+      } else {
+        res.status(422).json({ error: result.getErrorValue() });
+      }
+    } catch (error) {
+      console.error('Error inesperado al crear pedido:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  }
+}
+```
+
+### Rutas – `interfaces/web/order/routes/orderRoutes.ts`
+
+```typescript
+import { Router } from 'express';
+import { OrderController } from '../controllers/OrderController';
+import { CreateOrderUseCase } from '../../../../application/order/CreateOrderUseCase';
+import { InMemoryOrderRepository } from '../../../../infrastructure/persistence/InMemoryOrderRepository';
+import { InMemoryEventBus } from '../../../../infrastructure/event-bus/InMemoryEventBus';
+
+// Composición manual (idealmente se usa un contenedor de DI)
+const orderRepository = new InMemoryOrderRepository();
+const eventBus = new InMemoryEventBus();
+const createOrderUseCase = new CreateOrderUseCase(orderRepository, eventBus);
+const orderController = new OrderController(createOrderUseCase);
+
+const router = Router();
+
+router.post('/orders', (req, res) => orderController.create(req, res));
+
+export default router;
+```
+
+### Servidor principal – `interfaces/web/server.ts`
+
+```typescript
+import express from 'express';
+import orderRoutes from './order/routes/orderRoutes';
+
+const app = express();
+app.use(express.json());
+
+// Montar rutas del Bounded Context "Orders"
+app.use('/api', orderRoutes);
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor escuchando en puerto ${PORT}`);
+});
+```
+
+---
+
+## 🔄 Flujo hexagonal con la nueva estructura
+
+```
+Cliente HTTP → POST /api/orders
+     ↓
+interfaces/web/order/routes          ← Adaptador de entrada (Express)
+     ↓
+interfaces/web/order/controllers     ← Traducción HTTP → DTO
+     ↓
+application/order/CreateOrderUseCase ← Caso de uso (orquestación)
+     ↓
+domain/order/                        ← Dominio (agregados, eventos, puertos)
+     ↓
+infrastructure/                      ← Adaptadores de salida (repo, bus)
+```
+
+Todo está **alineado al Bounded Context "Orders"**. Si mañana añades otro contexto (p. ej. "Inventory"), solo creas `interfaces/web/inventory/` y su propio `application/inventory/` sin tocar nada existente.
+
+---
+
+## ✅ Beneficios de esta adaptación
+
+- **Modularidad por contexto**: cada equipo puede trabajar en su propio adaptador web sin pisarse.
+- **Cohesión**: la capa de interfaz sigue el mismo lenguaje ubicuo que el dominio (`order`, no `orders-management`).
+- **Independencia tecnológica**: puedes cambiar de Express a Fastify o a una API serverless solo modificando `interfaces/web`, sin afectar el dominio ni los casos de uso.
+- **Preparado para microservicios**: cada contexto con su propia carpeta en `interfaces/web` se puede extraer fácilmente a un servicio independiente.
+
+¿Quieres que veamos cómo se inyectarían las dependencias con un contenedor (ej. Inversify) o cómo añadir validación de DTOs con Zod?
+---
+
 He revisado cada archivo con lupa, buscando robustez, pureza funcional y alineación con DDD. Aquí van los ajustes detallados para dejar el Shared Kernel en estado *"de producción"*.
 
 ---

@@ -1,4 +1,4 @@
-import { UniqueId } from './UniqueId.js';
+import { UniqueId } from '../id/UniqueId.js';
 
 export abstract class DomainEvent {
   public readonly dateTimeOccurred: Date;

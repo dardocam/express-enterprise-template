@@ -1,4 +1,4 @@
-import { Identifier } from './Identifier.js';
+import { Identifier } from '../abstract/Identifier.js';
 import { v4 as uuidv4, validate as uuidValidate } from 'uuid';
 
 export class UniqueId extends Identifier<string> {
