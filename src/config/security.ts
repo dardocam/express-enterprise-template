@@ -1,11 +1,16 @@
 import { type Application } from 'express';
 import helmet from 'helmet';
-import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+import dotenv from 'dotenv';
+import { getCorsOptions } from './cors.js';
+import cors from 'cors';
+
+dotenv.config();
+
 
 export function applySecurityMiddleware(app: Application) {
   app.use(helmet());
-  app.use(cors());
+  app.use(cors(getCorsOptions()));
   app.use(
     rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes

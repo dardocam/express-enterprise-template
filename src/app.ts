@@ -8,8 +8,6 @@ import { errorHandler } from './shared/middleware/errorHandler.js';
 // import { healthRoutes } from './modules/health/health.routes.js';
 import { setupSwagger } from './config/swagger.js';
 // import { requestIdMiddleware } from './shared/middleware/requestId';
-import cors from 'cors';
-import { getCorsOptions } from '@shared/middleware/cors.js';
 
 export function createApp() {
   const app = express();
@@ -17,8 +15,8 @@ export function createApp() {
   // Essential middlewares
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-  // Aplicar el middleware CORS
-  app.use(cors(getCorsOptions()));
+  // Security
+  applySecurityMiddleware(app);
 
   // Request ID
   // app.use(requestIdMiddleware);
@@ -31,8 +29,6 @@ export function createApp() {
     }),
   );
 
-  // Security
-  applySecurityMiddleware(app);
 
   // Response wrapper (must be before routes)
   app.use(responseWrapper);
